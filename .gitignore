@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Build outputs
+infra/cdk.out/
+app/dist/
+app/android/
+app/ios/
+
+# Sensitive config - NEVER commit these
+app/src/aws-exports.ts
+app/.env.local
+.env
+.env.*
+
+# CDK
+cdk.context.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docs
+*.md
+
+# IDE
+.idea/
+.vscode/
+*.swp

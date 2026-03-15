@@ -1,0 +1,33 @@
+import * as cdk from 'aws-cdk-lib';
+import { Construct } from 'constructs';
+import { DEFAULT_STAGE } from './config/app-config';
+import { ApiConstruct } from './constructs/api';
+import { AuthConstruct } from './constructs/auth';
+import { DatabaseConstruct } from './constructs/database';
+import { StorageConstruct } from './constructs/storage';
+
+export class FamilyVaultStack extends cdk.Stack {
+  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
+    super(scope, id, props);
+
+    const stage = process.env.STAGE ?? DEFAULT_STAGE;
+
+    const storage = new StorageConstruct(this, 'Storage', { stage });
+    const auth = new AuthConstruct(this, 'Auth', { stage });
+    const database = new DatabaseConstruct(this, 'Database', { stage });
+    const api = new ApiConstruct(this, 'Api', {
+      stage,
+      userPool: auth.userPool,
+      userPoolClient: auth.userPoolClient,
+    });
+
+    new cdk.CfnOutput(this, 'BucketName', { value: storage.bucket.bucketName });
+    new cdk.CfnOutput(this, 'UserPoolId', { value: auth.userPool.userPoolId });
+    new cdk.CfnOutput(this, 'UserPoolClientId', {
+      value: auth.userPoolClient.userPoolClientId,
+    });
+    new cdk.CfnOutput(this, 'CognitoDomain', { value: auth.domain.domainName });
+    new cdk.CfnOutput(this, 'TableName', { value: database.table.tableName });
+    new cdk.CfnOutput(this, 'ApiUrl', { value: api.httpApi.url ?? '' });
+  }
+}

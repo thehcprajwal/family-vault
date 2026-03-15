@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+    box-sizing: border-box;
+  }
+
+  html {
+    background-color: #fdf6ee;
+  }
+
+  body {
+    margin: 0;
+    background:
+      radial-gradient(circle at top, rgba(250, 238, 218, 0.95), rgba(253, 246, 238, 1) 52%),
+      #fdf6ee;
+    color: #2a180a;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  #app {
+    min-height: 100vh;
+  }
+
+  input,
+  button,
+  select,
+  textarea {
+    outline: none;
+    font: inherit;
+  }
+
+  button {
+    background: none;
+    border: 0;
+    padding: 0;
+  }
+}
+
+@layer components {
+  .fv-input {
+    @apply h-[52px] w-full rounded-[13px] border border-[#D4B896] bg-[#FFFBF5] px-[14px] text-[15px] text-dark;
+    transition: border-color 0.15s ease;
+  }
+
+  .fv-input:focus {
+    @apply border-amber;
+  }
+
+  .fv-btn-primary {
+    @apply h-[54px] w-full cursor-pointer rounded-[13px] border-none bg-amber text-[16px] font-semibold text-[#FDF6EE];
+    transition: opacity 0.15s ease;
+  }
+
+  .fv-btn-primary:active {
+    @apply opacity-80;
+  }
+
+  .fv-btn-primary:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+}

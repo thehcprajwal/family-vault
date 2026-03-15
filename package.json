@@ -1,0 +1,31 @@
+{
+  "name": "familyvault",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.23.0",
+    "eslint": "^9.23.0",
+    "eslint-config-prettier": "^10.1.1",
+    "eslint-plugin-vue": "^9.33.0",
+    "globals": "^16.0.0",
+    "prettier": "^3.5.3",
+    "typescript-eslint": "^8.28.0",
+    "vue-eslint-parser": "^10.1.1"
+  },
+  "workspaces": ["infra", "app", "lambdas/*"],
+  "scripts": {
+    "lint": "eslint app/src infra/bin infra/lib lambdas --ext .ts,.vue",
+    "format": "prettier --write .",
+    "infra:build": "cd infra && npm run build",
+    "infra:deploy": "cd infra && cdk deploy",
+    "infra:diff": "cd infra && cdk diff",
+    "infra:synth": "cd infra && cdk synth",
+    "infra:test": "cd infra && npm run test",
+    "app:dev": "cd app && npm run dev",
+    "app:typecheck": "cd app && npm run typecheck",
+    "app:build": "cd app && npm run build",
+    "app:sync": "cd app && npm run cap:sync"
+  }
+}
