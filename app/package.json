@@ -14,7 +14,6 @@
     "cap:sync": "npm run build && npx cap sync"
   },
   "dependencies": {
-    "@aws-amplify/ui-vue": "^3.5.3",
     "aws-amplify": "^6.13.4",
     "pinia": "^2.3.1",
     "vue": "^3.5.13",
