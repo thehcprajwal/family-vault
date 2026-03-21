@@ -20,6 +20,16 @@ function toAuthUser(claims: Record<string, unknown>, userId: string): AuthUser {
   };
 }
 
+const DEV_MOCK = import.meta.env.VITE_DEV_MOCK === 'true';
+
+const MOCK_USER: AuthUser = {
+  sub: 'mock-sub-001',
+  email: 'dev@familyvault.local',
+  vaultId: 'mock-vault-id-001',
+  role: 'owner',
+  displayName: 'Dev User',
+};
+
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<AuthUser | null>(null);
   const isLoading = ref(true);
@@ -31,6 +41,10 @@ export const useAuthStore = defineStore('auth', () => {
   async function loadUser(): Promise<void> {
     isLoading.value = true;
     try {
+      if (DEV_MOCK) {
+        user.value = MOCK_USER;
+        return;
+      }
       const cognitoUser = await getCurrentUser();
       const session = await fetchAuthSession();
       const claims = session.tokens?.idToken?.payload;
@@ -82,6 +96,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function getAccessToken(): Promise<string> {
+    if (DEV_MOCK) return 'mock-access-token';
     const session = await fetchAuthSession();
     const token = session.tokens?.accessToken?.toString();
     if (!token) {
