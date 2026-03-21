@@ -1,6 +1,8 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as s3n from 'aws-cdk-lib/aws-s3-notifications';
 import { ALLOWED_ORIGINS, DEFAULT_STAGE } from '../config/app-config';
 
 export interface StorageConstructProps {
@@ -48,5 +50,12 @@ export class StorageConstruct extends Construct {
     new cdk.CfnOutput(this, 'DocumentsBucketArn', {
       value: this.bucket.bucketArn,
     });
+  }
+
+  addProcessDocumentTrigger(fn: lambda.IFunction): void {
+    this.bucket.addEventNotification(
+      s3.EventType.OBJECT_CREATED_PUT,
+      new s3n.LambdaDestination(fn),
+    );
   }
 }

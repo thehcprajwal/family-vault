@@ -4,6 +4,7 @@ import { DEFAULT_STAGE } from './config/app-config';
 import { ApiConstruct } from './constructs/api';
 import { AuthConstruct } from './constructs/auth';
 import { DatabaseConstruct } from './constructs/database';
+import { NotificationsConstruct } from './constructs/notifications';
 import { StorageConstruct } from './constructs/storage';
 
 export class FamilyVaultStack extends cdk.Stack {
@@ -15,11 +16,20 @@ export class FamilyVaultStack extends cdk.Stack {
     const storage = new StorageConstruct(this, 'Storage', { stage });
     const auth = new AuthConstruct(this, 'Auth', { stage });
     const database = new DatabaseConstruct(this, 'Database', { stage });
+    const notifications = new NotificationsConstruct(this, 'Notifications', { stage });
+
     const api = new ApiConstruct(this, 'Api', {
       stage,
       userPool: auth.userPool,
       userPoolClient: auth.userPoolClient,
+      table: database.table,
+      bucket: storage.bucket,
+      textractTopic: notifications.textractTopic,
+      textractRole: notifications.textractRole,
     });
+
+    // Wire S3 PutObject event → ProcessDocument Lambda
+    storage.addProcessDocumentTrigger(api.processDocumentLambda);
 
     new cdk.CfnOutput(this, 'BucketName', { value: storage.bucket.bucketName });
     new cdk.CfnOutput(this, 'UserPoolId', { value: auth.userPool.userPoolId });

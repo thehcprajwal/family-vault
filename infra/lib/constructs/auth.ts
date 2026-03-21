@@ -42,21 +42,20 @@ export class AuthConstruct extends Construct {
         tempPasswordValidity: cdk.Duration.days(7),
       },
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
+      customAttributes: {
+        vaultId: new cognito.StringAttribute({
+          minLen: 36,
+          maxLen: 36,
+          mutable: false,
+        }),
+        role: new cognito.StringAttribute({
+          minLen: 5,
+          maxLen: 6,
+          mutable: true,
+        }),
+      },
       removalPolicy:
         props.stage === DEFAULT_STAGE ? cdk.RemovalPolicy.DESTROY : cdk.RemovalPolicy.RETAIN,
-    });
-
-    this.userPool.addCustomAttributes({
-      vaultId: new cognito.StringAttribute({
-        minLen: 36,
-        maxLen: 36,
-        mutable: false,
-      }),
-      role: new cognito.StringAttribute({
-        minLen: 5,
-        maxLen: 6,
-        mutable: true,
-      }),
     });
 
     this.userPoolClient = new cognito.UserPoolClient(this, 'UserPoolClient', {
