@@ -22,6 +22,12 @@ const router = createRouter({
       component: () => import('@/views/UploadView.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/review/:documentId',
+      name: 'review',
+      component: () => import('@/views/ClassificationReviewView.vue'),
+      meta: { requiresAuth: true },
+    },
   ],
 });
 

@@ -214,6 +214,15 @@
           Cancel
         </button>
 
+        <!-- Review now (done only) -->
+        <button
+          v-if="upload.state.status === 'done' && upload.state.documentId"
+          class="h-[50px] w-full rounded-xl bg-sage text-[15px] font-semibold text-white"
+          @click="router.push(`/review/${upload.state.documentId}`)"
+        >
+          Review document
+        </button>
+
         <!-- Go to Home (processing or done) -->
         <button
           v-if="upload.state.status === 'processing' || upload.state.status === 'done'"
@@ -237,14 +246,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUploadStore } from '@/stores/upload';
+import { useClassificationStore } from '@/stores/classification';
 
 const router = useRouter();
 const upload = useUploadStore();
+const classificationStore = useClassificationStore();
 const fileInput = ref<HTMLInputElement | null>(null);
 const isDragging = ref(false);
+
+// When upload completes, register doc as pending review
+watch(
+  () => upload.state.status,
+  (status) => {
+    if (status === 'done' && upload.state.documentId) {
+      classificationStore.addPending(upload.state.documentId);
+    }
+  },
+);
 
 const isUploadInProgress = computed(() =>
   upload.state.status === 'uploading' || upload.state.status === 'preparing',

@@ -1,4 +1,4 @@
-import type { PersonRecord } from './types';
+import type { PersonMatch, PersonRecord } from './types';
 
 // ── Relationship synonyms (Indian family context) ─────────────
 const RELATIONSHIP_SYNONYMS: Record<string, string[]> = {
@@ -39,13 +39,6 @@ function levenshtein(a: string, b: string): number {
   return dp[m][n];
 }
 
-// ── Public interface ──────────────────────────────────────────
-export interface PersonMatch {
-  personId: string;
-  displayName: string;
-  confidence: number;
-}
-
 export function matchPerson(
   hint: string | null,
   persons: PersonRecord[],
@@ -54,29 +47,31 @@ export function matchPerson(
 
   const hintLower = hint.toLowerCase().trim();
 
-  // Layer 1 — Exact case-insensitive (confidence 1.0)
+  // Layer 1 — Exact case-insensitive (confidenceMultiplier 1.0)
   const exact = persons.find((p) => p.displayName.toLowerCase() === hintLower);
-  if (exact) return { personId: exact.personId, displayName: exact.displayName, confidence: 1.0 };
+  if (exact) {
+    return { personId: exact.personId, displayName: exact.displayName, matchLayer: 'exact', confidenceMultiplier: 1.0 };
+  }
 
-  // Layer 2 — Relationship synonym match (confidence 0.9)
+  // Layer 2 — Relationship synonym match (confidenceMultiplier 0.9)
   const hintRel = SYNONYM_TO_REL.get(hintLower);
   if (hintRel) {
     for (const person of persons) {
       const personRel = SYNONYM_TO_REL.get(person.displayName.toLowerCase());
       if (personRel === hintRel) {
-        return { personId: person.personId, displayName: person.displayName, confidence: 0.9 };
+        return { personId: person.personId, displayName: person.displayName, matchLayer: 'synonym', confidenceMultiplier: 0.9 };
       }
     }
   }
 
-  // Layer 3 — Levenshtein ≤ 2 (confidence 0.8)
+  // Layer 3 — Levenshtein ≤ 2 (confidenceMultiplier 0.8)
   let best: PersonMatch | null = null;
   let bestDist = 3;
   for (const person of persons) {
     const dist = levenshtein(hintLower, person.displayName.toLowerCase());
     if (dist <= 2 && dist < bestDist) {
       bestDist = dist;
-      best = { personId: person.personId, displayName: person.displayName, confidence: 0.8 };
+      best = { personId: person.personId, displayName: person.displayName, matchLayer: 'fuzzy', confidenceMultiplier: 0.8 };
     }
   }
 

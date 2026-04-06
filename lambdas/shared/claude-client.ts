@@ -1,19 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk';
-import type { PersonRecord, CategoryRecord } from './types';
+import type { ClaudeClassification, PersonRecord, CategoryRecord } from './types';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const MAX_OCR_CHARS = 1500;
-
-export interface ClassificationResult {
-  personHint: string | null;
-  category: string;
-  subcategory: string | null;
-  displayName: string;
-  confidence: number;
-  expiryDate: string | null; // YYYY-MM-DD
-  reasoning: string;
-}
 
 const SYSTEM_PROMPT = `You are a document classifier for an Indian family document vault.
 Given OCR text from a scanned document, return ONLY a JSON object with these fields:
@@ -31,7 +21,7 @@ export async function classifyDocument(
   ocrText: string,
   persons: PersonRecord[],
   categories: CategoryRecord[],
-): Promise<ClassificationResult | null> {
+): Promise<ClaudeClassification | null> {
   if (!ocrText.trim()) return null;
 
   const truncated = ocrText.slice(0, MAX_OCR_CHARS);
@@ -70,7 +60,7 @@ Classify this document.`;
     });
 
     const text = response.content[0].type === 'text' ? response.content[0].text.trim() : '';
-    return JSON.parse(text) as ClassificationResult;
+    return JSON.parse(text) as ClaudeClassification;
   } catch (err) {
     console.error('Claude classification failed:', err);
     return null;

@@ -5,6 +5,7 @@ node_modules/
 # Build outputs
 infra/cdk.out/
 app/dist/
+infra/dist/
 app/android/
 app/ios/
 

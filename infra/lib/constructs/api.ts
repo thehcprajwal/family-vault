@@ -22,6 +22,7 @@ export interface ApiConstructProps {
   bucket: s3.Bucket;
   textractTopic: sns.Topic;
   textractRole: iam.Role;
+  pushNotificationTopic: sns.Topic;
 }
 
 export class ApiConstruct extends Construct {
@@ -31,7 +32,7 @@ export class ApiConstruct extends Construct {
   constructor(scope: Construct, id: string, props: ApiConstructProps) {
     super(scope, id);
 
-    const { stage, table, bucket, textractTopic, textractRole } = props;
+    const { stage, table, bucket, textractTopic, textractRole, pushNotificationTopic } = props;
 
     this.httpApi = new apigatewayv2.HttpApi(this, 'HttpApi', {
       apiName: `familyvault-api-${stage}`,
@@ -66,6 +67,7 @@ export class ApiConstruct extends Construct {
       TEXTRACT_SNS_TOPIC_ARN: textractTopic.topicArn,
       TEXTRACT_ROLE_ARN: textractRole.roleArn,
       ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ?? '',
+      PUSH_NOTIFICATION_SNS_TOPIC_ARN: pushNotificationTopic.topicArn,
     };
 
     // ── Health check (Sprint 1) ───────────────────────────────
@@ -244,6 +246,151 @@ export class ApiConstruct extends Construct {
       integration: new apigatewayv2Integrations.HttpLambdaIntegration(
         'ConfirmDocumentIntegration',
         confirmDocumentLambda,
+      ),
+      authorizer,
+    });
+
+    // ── ListPersons Lambda ────────────────────────────────────
+    const listPersonsLambda = new lambdaNodejs.NodejsFunction(this, 'ListPersonsLambda', {
+      functionName: `familyvault-list-persons-${stage}`,
+      runtime: lambda.Runtime.NODEJS_20_X,
+      entry: path.resolve(__dirname, '../../../lambdas/list-persons/index.ts'),
+      handler: 'handler',
+      bundling: {
+        format: lambdaNodejs.OutputFormat.CJS,
+        minify: true,
+        sourceMap: true,
+        target: 'node20',
+        externalModules: [],
+      },
+      environment: { TABLE_NAME: table.tableName },
+      timeout: cdk.Duration.seconds(10),
+      memorySize: 128,
+    });
+
+    table.grantReadData(listPersonsLambda);
+
+    this.httpApi.addRoutes({
+      path: '/v1/persons',
+      methods: [apigatewayv2.HttpMethod.GET],
+      integration: new apigatewayv2Integrations.HttpLambdaIntegration(
+        'ListPersonsIntegration',
+        listPersonsLambda,
+      ),
+      authorizer,
+    });
+
+    // Grant process-document + textract-complete permission to publish push notifications
+    pushNotificationTopic.grantPublish(this.processDocumentLambda);
+    pushNotificationTopic.grantPublish(textractCompleteLambda);
+
+    // ── PushNotification Lambda (SNS-triggered, no API route) ─
+    const pushNotificationLambda = new lambdaNodejs.NodejsFunction(
+      this,
+      'PushNotificationLambda',
+      {
+        functionName: `familyvault-push-notification-${stage}`,
+        runtime: lambda.Runtime.NODEJS_20_X,
+        entry: path.resolve(__dirname, '../../../lambdas/push-notification/handler.ts'),
+        handler: 'handler',
+        bundling: {
+          format: lambdaNodejs.OutputFormat.CJS,
+          minify: true,
+          sourceMap: true,
+          target: 'node20',
+          externalModules: [],
+        },
+        environment: {
+          TABLE_NAME: table.tableName,
+          VAPID_SSM_PATH: `/familyvault/${stage}`,
+        },
+        timeout: cdk.Duration.seconds(30),
+        memorySize: 256,
+      },
+    );
+
+    table.grantReadWriteData(pushNotificationLambda);
+
+    pushNotificationLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['ssm:GetParameters'],
+        resources: [
+          `arn:aws:ssm:${cdk.Stack.of(this).region}:${cdk.Stack.of(this).account}:parameter/familyvault/${stage}/*`,
+        ],
+      }),
+    );
+
+    pushNotificationTopic.addSubscription(
+      new snsSubscriptions.LambdaSubscription(pushNotificationLambda),
+    );
+
+    // ── SavePushSubscription Lambda ───────────────────────────
+    const savePushSubscriptionLambda = new lambdaNodejs.NodejsFunction(
+      this,
+      'SavePushSubscriptionLambda',
+      {
+        functionName: `familyvault-save-push-subscription-${stage}`,
+        runtime: lambda.Runtime.NODEJS_20_X,
+        entry: path.resolve(__dirname, '../../../lambdas/save-push-subscription/handler.ts'),
+        handler: 'handler',
+        bundling: {
+          format: lambdaNodejs.OutputFormat.CJS,
+          minify: true,
+          sourceMap: true,
+          target: 'node20',
+          externalModules: [],
+        },
+        environment: {
+          TABLE_NAME: table.tableName,
+        },
+        timeout: cdk.Duration.seconds(10),
+        memorySize: 128,
+      },
+    );
+
+    table.grantWriteData(savePushSubscriptionLambda);
+
+    this.httpApi.addRoutes({
+      path: '/v1/push/subscription',
+      methods: [apigatewayv2.HttpMethod.POST],
+      integration: new apigatewayv2Integrations.HttpLambdaIntegration(
+        'SavePushSubscriptionIntegration',
+        savePushSubscriptionLambda,
+      ),
+      authorizer,
+    });
+
+    // ── ReclassifyDocument Lambda ─────────────────────────────
+    const reclassifyDocumentLambda = new lambdaNodejs.NodejsFunction(
+      this,
+      'ReclassifyDocumentLambda',
+      {
+        functionName: `familyvault-reclassify-document-${stage}`,
+        runtime: lambda.Runtime.NODEJS_20_X,
+        entry: path.resolve(__dirname, '../../../lambdas/reclassify-document/handler.ts'),
+        handler: 'handler',
+        bundling: {
+          format: lambdaNodejs.OutputFormat.CJS,
+          minify: true,
+          sourceMap: true,
+          target: 'node20',
+          externalModules: [],
+        },
+        environment: commonEnv,
+        timeout: cdk.Duration.seconds(60),
+        memorySize: 256,
+      },
+    );
+
+    table.grantReadWriteData(reclassifyDocumentLambda);
+    pushNotificationTopic.grantPublish(reclassifyDocumentLambda);
+
+    this.httpApi.addRoutes({
+      path: '/v1/documents/{id}/reclassify',
+      methods: [apigatewayv2.HttpMethod.POST],
+      integration: new apigatewayv2Integrations.HttpLambdaIntegration(
+        'ReclassifyDocumentIntegration',
+        reclassifyDocumentLambda,
       ),
       authorizer,
     });

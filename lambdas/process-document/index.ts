@@ -7,9 +7,7 @@ import {
 import { DynamoDBClient, UpdateItemCommand, QueryCommand } from '@aws-sdk/client-dynamodb';
 import { marshall, unmarshall } from '@aws-sdk/util-dynamodb';
 import { extractTextFromBlocks } from '../shared/ocr-utils';
-import { classifyDocument } from '../shared/claude-client';
-import { matchPerson } from '../shared/person-matching';
-import type { PersonRecord, CategoryRecord } from '../shared/types';
+import { runClassification } from '../classify-document/handler';
 
 const textract = new TextractClient({ region: process.env.AWS_REGION });
 const dynamo = new DynamoDBClient({ region: process.env.AWS_REGION });
@@ -51,76 +49,6 @@ async function findDocumentId(vaultId: string, versionId: string): Promise<strin
   const item = unmarshall(result.Items[0]);
   const match = (item['SK'] as string)?.match(/^DOC#([^#]+)#VER#/);
   return match?.[1] ?? null;
-}
-
-async function fetchPersons(vaultId: string): Promise<PersonRecord[]> {
-  const result = await dynamo.send(
-    new QueryCommand({
-      TableName: TABLE_NAME,
-      KeyConditionExpression: 'PK = :pk AND begins_with(SK, :prefix)',
-      ExpressionAttributeValues: marshall({
-        ':pk': `VAULT#${vaultId}`,
-        ':prefix': 'PERSON#',
-      }),
-    }),
-  );
-  return (result.Items ?? []).map((i) => unmarshall(i) as PersonRecord);
-}
-
-async function fetchCategories(vaultId: string): Promise<CategoryRecord[]> {
-  const result = await dynamo.send(
-    new QueryCommand({
-      TableName: TABLE_NAME,
-      KeyConditionExpression: 'PK = :pk AND begins_with(SK, :prefix)',
-      ExpressionAttributeValues: marshall({
-        ':pk': `VAULT#${vaultId}`,
-        ':prefix': 'CATEGORY#',
-      }),
-    }),
-  );
-  return (result.Items ?? []).map((i) => unmarshall(i) as CategoryRecord);
-}
-
-async function runClassificationAndUpdateDocument(
-  vaultId: string,
-  documentId: string,
-  ocrText: string,
-): Promise<void> {
-  const [persons, categories] = await Promise.all([
-    fetchPersons(vaultId),
-    fetchCategories(vaultId),
-  ]);
-
-  const classification = await classifyDocument(ocrText, persons, categories);
-  if (!classification) return;
-
-  const personMatch = matchPerson(classification.personHint, persons);
-  const adjustedConfidence = classification.confidence * (personMatch?.confidence ?? 1.0);
-
-  const docKey = { PK: `VAULT#${vaultId}`, SK: `DOC#${documentId}` };
-
-  await dynamo.send(
-    new UpdateItemCommand({
-      TableName: TABLE_NAME,
-      Key: marshall(docKey),
-      UpdateExpression: [
-        'SET suggestedPersonId = :personId',
-        'suggestedCategoryId = :catId',
-        'suggestedSubcategory = :sub',
-        'suggestedDisplayName = :name',
-        'classificationConfidence = :conf',
-        'updatedAt = :now',
-      ].join(', '),
-      ExpressionAttributeValues: marshall({
-        ':personId': personMatch?.personId ?? null,
-        ':catId': classification.category ?? null,
-        ':sub': classification.subcategory ?? null,
-        ':name': classification.displayName,
-        ':conf': adjustedConfidence,
-        ':now': new Date().toISOString(),
-      }, { removeUndefinedValues: true }),
-    }),
-  );
 }
 
 async function updateVersionAwaitingConfirmation(
@@ -190,7 +118,7 @@ async function processImageSync(
   await updateVersionAwaitingConfirmation(vaultId, documentId, versionId, ocrText, isPoorQuality);
 
   if (!isPoorQuality && ocrText) {
-    await runClassificationAndUpdateDocument(vaultId, documentId, ocrText);
+    await runClassification(TABLE_NAME, vaultId, documentId, versionId, ocrText);
   }
 }
 

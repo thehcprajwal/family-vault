@@ -19,6 +19,41 @@ export interface VersionKeys {
   SK: string; // DOC#{documentId}#VER#{versionId}
 }
 
+// ── AI classification ─────────────────────────────────────────
+export interface ClaudeClassification {
+  personHint: string | null;
+  category: string;
+  subcategory: string | null;
+  displayName: string;
+  confidence: number;
+  expiryDate: string | null; // YYYY-MM-DD
+  reasoning: string;
+}
+
+// ── Person matching ───────────────────────────────────────────
+export interface PersonMatch {
+  personId: string;
+  displayName: string;
+  matchLayer: 'exact' | 'synonym' | 'fuzzy';
+  confidenceMultiplier: number;
+}
+
+// ── Web Push ──────────────────────────────────────────────────
+export interface PushSubscription {
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+}
+
+export interface PushPayload {
+  title: string;
+  body: string;
+  documentId?: string;
+  data?: Record<string, unknown>;
+}
+
 // ── DynamoDB person record ────────────────────────────────────
 export interface PersonRecord {
   PK: string; // VAULT#{vaultId}
@@ -26,6 +61,8 @@ export interface PersonRecord {
   personId: string;
   displayName: string;
   relationship?: string;
+  pushSubscription?: PushSubscription;
+  pushSubscriptionUpdatedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -60,6 +97,7 @@ export interface DocumentRecord extends DocumentKeys {
   suggestedCategoryId?: string | null;
   suggestedSubcategory?: string | null;
   suggestedDisplayName?: string;
+  suggestedExpiryDate?: string | null;
   classificationConfidence?: number;
   createdAt: string;
   updatedAt: string;
@@ -77,6 +115,9 @@ export interface VersionRecord extends VersionKeys {
   ocrText?: string;
   isPoorQuality?: boolean;
   errorMessage?: string;
+  llmSuggestion?: ClaudeClassification;
+  llmConfidence?: number;
+  personMatchLayer?: 'exact' | 'synonym' | 'fuzzy';
   createdAt: string;
   updatedAt: string;
 }

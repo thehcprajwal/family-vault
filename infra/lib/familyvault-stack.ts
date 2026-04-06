@@ -26,6 +26,7 @@ export class FamilyVaultStack extends cdk.Stack {
       bucket: storage.bucket,
       textractTopic: notifications.textractTopic,
       textractRole: notifications.textractRole,
+      pushNotificationTopic: notifications.pushNotificationTopic,
     });
 
     // Wire S3 PutObject event → ProcessDocument Lambda

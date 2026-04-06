@@ -1,5 +1,5 @@
 {
-  "name": "textract-complete",
+  "name": "reclassify-document",
   "version": "1.0.0",
   "engines": {
     "node": ">=20"
@@ -8,7 +8,6 @@
     "@anthropic-ai/sdk": "^0.36.3",
     "@aws-sdk/client-dynamodb": "^3",
     "@aws-sdk/client-sns": "^3",
-    "@aws-sdk/client-textract": "^3",
     "@aws-sdk/util-dynamodb": "^3"
   },
   "devDependencies": {

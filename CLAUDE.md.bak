@@ -1,0 +1,167 @@
+# FamilyVault
+
+## What This Project Is
+A private, family-owned document vault PWA (Vue 3 + Capacitor) backed by AWS. Documents are uploaded, auto-classified by Textract + Claude, and retrievable via natural language search. Human confirmation is required before any document is saved.
+
+## Stack
+
+| Layer | Tech |
+|-------|------|
+| Frontend | Vue 3 + Vite + TailwindCSS + Pinia |
+| Native shell | Capacitor (Android APK / iOS TestFlight) |
+| Auth | AWS Cognito User Pools (Amplify SDK) |
+| API | AWS API Gateway HTTP API + Cognito JWT Authorizer |
+| Compute | AWS Lambda (Node.js 20 + TypeScript) |
+| Database | DynamoDB single-table (`familyvault`) |
+| File storage | S3 (presigned URLs only, SSE-S3 encrypted) |
+| OCR | AWS Textract (sync for images, async+SNS for PDFs) |
+| AI | Anthropic Claude Sonnet 4 (classification + search slot extraction) |
+| IaC | AWS CDK (TypeScript) |
+| Build | npm workspaces — `app/`, `lambdas/`, `infra/` |
+
+## Project Structure
+
+```
+family-vault/
+├── app/          — Vue 3 + Vite PWA (Capacitor)
+│   └── src/
+│       ├── views/        — page-level components
+│       ├── components/   — reusable UI components
+│       ├── composables/  — Vue composables
+│       ├── stores/       — Pinia stores
+│       ├── services/     — API + AWS SDK calls
+│       ├── router/       — Vue Router
+│       └── types/        — shared TypeScript types
+├── lambdas/      — Lambda functions (each is a workspace)
+│   ├── health-check/
+│   └── shared/   — shared Lambda utilities
+├── infra/        — AWS CDK stack
+│   ├── lib/
+│   │   ├── familyvault-stack.ts   — main stack definition
+│   │   └── constructs/            — CDK constructs
+│   └── bin/
+└── Requirements.md   — authoritative source of truth for all design decisions
+```
+
+## Architecture Decisions
+
+- **Single DynamoDB table** with PK/SK pattern + 4 GSIs (person-index, category-index, status-index, expiry-index)
+- **S3 key format:** `{vaultId}/raw/{versionId}.{ext}` — UUID-based, s3Key never returned to frontend
+- **ocrText** encrypted before DynamoDB write (AWS Encryption SDK); only first 1500 chars sent to Claude
+- **Tenant isolation:** every DynamoDB query scoped to `vaultId` from JWT `custom:vaultId` claim
+- **No auto-save:** all AI suggestions require explicit human confirmation (PATCH /documents/{id}/confirm)
+- **Presigned URLs only:** S3 bucket has Block Public Access; GET URLs valid 15 min, PUT URLs valid 5 min
+- **Cognito roles:** `custom:role` = `owner` or `member`; only owners can delete docs, manage family/categories
+
+## Patterns We Follow
+
+- Lambda functions extract `vaultId` and `role` from JWT claims — never trust client-supplied tenant IDs
+- Person matching uses 3-layer algorithm: exact → relationship synonym → Levenshtein ≤ 2 (see Requirements.md §5.6)
+- Poor OCR (< 50 chars or avg confidence < 60%) skips Claude entirely; UI prompts manual entry
+- Document statuses: `PENDING → CONFIRMED | DELETED`; version statuses: `PROCESSING → AWAITING_CONFIRMATION → CONFIRMED | SUPERSEDED | FAILED`
+- Push notifications delivered via SNS → Web Push service worker
+
+## Never Do
+
+- Never return `s3Key` to the frontend — always generate a presigned URL instead
+- Never commit `aws-exports.ts` (git-ignored; use `aws-exports.example.ts` as template)
+- Never send more than 1500 chars of OCR text to Claude
+- Never auto-confirm a document — user confirmation step is a core security/trust requirement
+- Never use public S3 URLs
+
+## Key File Locations
+
+- `Requirements.md` — authoritative design doc (data model, API spec, all functional requirements)
+- `app/src/aws-exports.ts` — Cognito + API config (git-ignored)
+- `infra/lib/familyvault-stack.ts` — main CDK stack
+- `infra/lib/constructs/` — CDK constructs per resource group
+- `lambdas/shared/` — shared Lambda utilities (DynamoDB client, JWT helpers, etc.)
+
+## Context Tools Available (ctx-engine)
+
+- `ctx_budget` — check context window before large operations
+- `ctx_store(path:)` — store files in local knowledge base
+- `ctx_recall("query")` — retrieve stored content on demand
+- `ctx_checkpoint(...)` — save session state before compaction
+- `ctx_shrink(content:)` — compress large content in context
+- `ctx_list()` — see what is stored
+- `ctx_forget(ref:)` — remove stored content
+
+## Session Workflow
+
+### Starting A Task
+When the user says to start a task or work on a feature:
+1. Call ctx_start("task name") first — always, before writing any code
+2. Read the spec and sub-tasks it returns
+3. Start implementing the first sub-task
+
+### During Building
+After completing each sub-task from ctx_start output:
+1. Call ctx_progress with updated pct and the completed item in done[]
+2. Continue to next sub-task
+3. Estimate pct based on sub-tasks: 1 of 5 done = 20%, 2 of 5 = 40% etc
+
+### Finishing A Task
+When all sub-tasks are done:
+1. Call ctx_progress(pct: 100, done: ["all sub-task names"])
+2. Tell the user the task is complete
+3. Ask what to work on next or suggest: ctx_start("next task")
+
+### Context Health
+Call ctx_budget every 10 tool calls automatically.
+If runway drops below 15 turns, warn the user immediately.
+```
+
+---
+
+### What Happens After This
+
+You say:
+```
+start working on upload-url Lambda
+```
+
+Claude Code:
+1. Calls `ctx_start("upload-url Lambda")` — spec loaded, sub-tasks ready
+2. Builds the handler skeleton
+3. Calls `ctx_progress(pct: 17, done: ["handler skeleton and types"])` automatically
+4. Builds presigned URL generation
+5. Calls `ctx_progress(pct: 33, done: ["presigned S3 PUT URL generation"])` automatically
+6. Continues until done
+7. Calls `ctx_progress(pct: 100, done: [...])`
+8. Reports back to you: "upload-url Lambda is done. Ready for create-document Lambda?"
+
+You never touch `ctx_progress`. You never think about percentages. You just watch it build.
+
+---
+
+## Your Actual Day Now
+```
+Morning:
+  ctx_budget                        ← you call this once
+  ctx_tasks()                       ← you call this once
+  "start working on shared types"   ← you say this
+
+Claude Code handles everything else:
+  ctx_start("shared types")         ← automatic
+  [builds]
+  ctx_progress(pct: 25, done: [...]) ← automatic
+  [builds more]
+  ctx_progress(pct: 100, done: [...]) ← automatic
+  "shared types done. Start dynamo-client?"
+
+  ctx_start("dynamo-client")        ← automatic
+  [builds]
+  ...
+
+End of day:
+  close terminal                    ← auto-checkpoint fires
+```
+
+You call three commands all day. Claude Code does the rest.
+
+---
+
+## Update Your CLAUDE.md Right Now
+```
+ctx_init(dir: "/Users/hcprajwal/Desktop/family-vault", write: true)
