@@ -31,6 +31,15 @@
     </div>
 
     <div class="p-4">
+      <!-- Renewal context banner -->
+      <div
+        v-if="renewalBanner && (upload.state.status === 'idle' || upload.state.status === 'preparing')"
+        class="mb-4 flex items-center gap-3 rounded-xl bg-sage/10 px-4 py-3"
+      >
+        <span class="text-[18px]">🔄</span>
+        <p class="text-[13px] text-sage font-medium">{{ renewalBanner }}</p>
+      </div>
+
       <!-- Info tip banner -->
       <div
         v-if="upload.state.status === 'idle' || upload.state.status === 'preparing'"
@@ -246,16 +255,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, computed, watch, onMounted } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { useUploadStore } from '@/stores/upload';
 import { useClassificationStore } from '@/stores/classification';
 
 const router = useRouter();
+const route = useRoute();
 const upload = useUploadStore();
 const classificationStore = useClassificationStore();
 const fileInput = ref<HTMLInputElement | null>(null);
 const isDragging = ref(false);
+const renewalBanner = ref<string | null>(null);
+
+onMounted(() => {
+  const personId = route.query['personId'] as string | undefined;
+  const categoryId = route.query['categoryId'] as string | undefined;
+  const subcategory = route.query['subcategory'] as string | undefined;
+  if (personId || categoryId) {
+    classificationStore.setRenewalContext({ personId, categoryId, subcategory });
+    renewalBanner.value = 'Renewing document — AI will pre-select the same person and category';
+  }
+});
 
 // When upload completes, register doc as pending review
 watch(

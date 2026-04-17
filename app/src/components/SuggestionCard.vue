@@ -62,7 +62,7 @@
 
       <!-- Low confidence warning -->
       <div
-        v-if="suggestion.confidence < 0.5"
+        v-if="suggestion.confidence < 0.70"
         class="mb-3 flex items-start gap-2 rounded-xl bg-amber-light p-3"
       >
         <svg

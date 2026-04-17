@@ -28,9 +28,20 @@ const MOCK_SUGGESTION: ClassificationResult = {
   reasoning: 'Document contains Aadhaar number and photo ID elements typical of an Aadhaar card.',
 };
 
+interface RenewalContext {
+  personId?: string;
+  categoryId?: string;
+  subcategory?: string;
+}
+
 export const useClassificationStore = defineStore('classification', () => {
   const pending = ref<PendingDocument[]>([]);
   const pendingCount = computed(() => pending.value.length);
+  const renewalContext = ref<RenewalContext | null>(null);
+
+  function setRenewalContext(ctx: RenewalContext): void {
+    renewalContext.value = ctx;
+  }
 
   function getDocument(documentId: string): PendingDocument | undefined {
     return pending.value.find((d) => d.documentId === documentId);
@@ -38,13 +49,15 @@ export const useClassificationStore = defineStore('classification', () => {
 
   function addPending(documentId: string): void {
     if (getDocument(documentId)) return;
+    const ctx = renewalContext.value;
     pending.value.push({
       documentId,
       loadState: 'loading',
       suggestion: null,
-      edits: null,
+      edits: ctx ? { personId: ctx.personId, categoryId: ctx.categoryId, subcategory: ctx.subcategory } : null,
       error: null,
     });
+    renewalContext.value = null;
   }
 
   async function loadSuggestion(documentId: string): Promise<void> {
@@ -108,6 +121,8 @@ export const useClassificationStore = defineStore('classification', () => {
   return {
     pending,
     pendingCount,
+    renewalContext,
+    setRenewalContext,
     addPending,
     getDocument,
     loadSuggestion,
