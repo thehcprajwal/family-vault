@@ -5,17 +5,38 @@
       <p class="text-muted text-sm">Loading FamilyVault...</p>
     </div>
   </div>
-  <RouterView v-else />
+
+  <template v-else>
+    <OfflineBanner />
+    <RouterView />
+    <BottomNav />
+    <InstallBanner />
+  </template>
 </template>
 
 <script setup lang="ts">
 import { onMounted } from 'vue';
 import { RouterView } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { useAppStore } from '@/stores/app';
+import { useOnlineStatus } from '@/composables/useOnlineStatus';
+import { useDarkMode } from '@/composables/useDarkMode';
+import BottomNav from '@/components/BottomNav.vue';
+import OfflineBanner from '@/components/OfflineBanner.vue';
+import InstallBanner from '@/components/InstallBanner.vue';
 
 const authStore = useAuthStore();
+const appStore = useAppStore();
+
+useOnlineStatus();
+useDarkMode();
 
 onMounted(() => {
   void authStore.loadUser();
+
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    appStore.setInstallPrompt(e as unknown as Parameters<typeof appStore.setInstallPrompt>[0]);
+  });
 });
 </script>

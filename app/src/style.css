@@ -42,6 +42,30 @@
   }
 }
 
+/* ── Dark mode CSS variable overrides ───────────────────────── */
+[data-theme="dark"] {
+  --fv-cream:        #1C1108;
+  --fv-cream-dark:   #2A1A0A;
+  --fv-card-bg:      #221508;
+  --fv-border:       #3D2810;
+  --fv-text-primary: #F5E8D4;
+  --fv-text-muted:   #9C7A5C;
+  --fv-amber:        #D4843A;
+}
+
+/* ── Skeleton shimmer animation ─────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #E2CEBC 25%, #F5E8D4 50%, #E2CEBC 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 14px;
+}
+
 @layer components {
   .fv-input {
     @apply h-[52px] w-full rounded-[13px] border border-[#D4B896] bg-[#FFFBF5] px-[14px] text-[15px] text-dark;
