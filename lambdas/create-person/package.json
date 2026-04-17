@@ -1,0 +1,14 @@
+{
+  "name": "create-person",
+  "version": "1.0.0",
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3",
+    "@aws-sdk/client-dynamodb": "^3",
+    "@aws-sdk/util-dynamodb": "^3"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.147",
+    "typescript": "^5.8.2"
+  }
+}
