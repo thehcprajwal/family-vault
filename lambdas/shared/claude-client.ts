@@ -51,17 +51,39 @@ ${truncated}
 
 Classify this document.`;
 
+  return callWithRetry(userMessage, 0);
+}
+
+async function callWithRetry(userMessage: string, attempt: number): Promise<ClaudeClassification | null> {
   try {
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 512,
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 256,
+      temperature: 0,
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userMessage }],
     });
 
     const text = response.content[0].type === 'text' ? response.content[0].text.trim() : '';
-    return JSON.parse(text) as ClaudeClassification;
-  } catch (err) {
+
+    try {
+      return JSON.parse(text) as ClaudeClassification;
+    } catch {
+      if (attempt === 0) {
+        // Retry once with a stricter prompt appended
+        const stricterMessage = userMessage + '\n\nIMPORTANT: Return ONLY a raw JSON object. No markdown, no code fences, no explanation.';
+        return callWithRetry(stricterMessage, 1);
+      }
+      console.error('Claude returned unparseable JSON after retry:', text);
+      return null;
+    }
+  } catch (err: unknown) {
+    const status = (err as { status?: number }).status;
+    if (status === 429 && attempt < 3) {
+      const delay = Math.pow(2, attempt) * 1000;
+      await new Promise((res) => setTimeout(res, delay));
+      return callWithRetry(userMessage, attempt + 1);
+    }
     console.error('Claude classification failed:', err);
     return null;
   }

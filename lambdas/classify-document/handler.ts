@@ -37,7 +37,9 @@ async function fetchCategories(tableName: string, vaultId: string): Promise<Cate
       ExpressionAttributeValues: marshall({ ':pk': `VAULT#${vaultId}`, ':prefix': 'CATEGORY#' }),
     }),
   );
-  return (result.Items ?? []).map((i) => unmarshall(i) as CategoryRecord);
+  return (result.Items ?? [])
+    .map((i) => unmarshall(i) as CategoryRecord & { enabled?: boolean })
+    .filter((c) => c.enabled !== false);
 }
 
 export async function runClassification(

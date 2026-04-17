@@ -64,14 +64,14 @@ export function matchPerson(
     }
   }
 
-  // Layer 3 — Levenshtein ≤ 2 (confidenceMultiplier 0.8)
+  // Layer 3 — Levenshtein ≤ 2 (confidenceMultiplier 0.75)
   let best: PersonMatch | null = null;
   let bestDist = 3;
   for (const person of persons) {
     const dist = levenshtein(hintLower, person.displayName.toLowerCase());
     if (dist <= 2 && dist < bestDist) {
       bestDist = dist;
-      best = { personId: person.personId, displayName: person.displayName, matchLayer: 'fuzzy', confidenceMultiplier: 0.8 };
+      best = { personId: person.personId, displayName: person.displayName, matchLayer: 'fuzzy', confidenceMultiplier: 0.75 };
     }
   }
 
