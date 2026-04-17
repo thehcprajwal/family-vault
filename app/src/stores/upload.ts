@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { uploadApi } from '@/services/api/upload';
+import { documentsApi } from '@/services/api/documents';
 
 const DEV_MOCK = import.meta.env.VITE_DEV_MOCK === 'true';
 
@@ -158,6 +159,37 @@ export const useUploadStore = defineStore('upload', () => {
       });
 
       state.value.documentId = documentId;
+
+      // Step 4: Poll until AWAITING_CONFIRMATION or FAILED (max 3 minutes)
+      const MAX_POLLS = 36;
+      for (let i = 0; i < MAX_POLLS; i++) {
+        if (abortController.signal.aborted) return;
+        await new Promise<void>((resolve) => {
+          const timer = setTimeout(resolve, 5000);
+          abortController!.signal.addEventListener('abort', () => {
+            clearTimeout(timer);
+            resolve();
+          });
+        });
+        if (abortController.signal.aborted) return;
+        try {
+          const { versionStatus } = await documentsApi.getStatus(documentId);
+          if (versionStatus === 'AWAITING_CONFIRMATION') break;
+          if (versionStatus === 'FAILED') {
+            state.value.status = 'error';
+            state.value.errorMessage = 'Processing failed. Please try again.';
+            return;
+          }
+        } catch {
+          // transient error — keep polling
+        }
+        if (i === MAX_POLLS - 1) {
+          state.value.status = 'error';
+          state.value.errorMessage = 'Processing timed out. Try reviewing the document manually.';
+          return;
+        }
+      }
+
       state.value.status = 'done';
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;

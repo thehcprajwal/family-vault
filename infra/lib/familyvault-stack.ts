@@ -5,6 +5,7 @@ import { ApiConstruct } from './constructs/api';
 import { AuthConstruct } from './constructs/auth';
 import { DatabaseConstruct } from './constructs/database';
 import { NotificationsConstruct } from './constructs/notifications';
+import { PipelineConstruct } from './constructs/pipeline';
 import { StorageConstruct } from './constructs/storage';
 
 export class FamilyVaultStack extends cdk.Stack {
@@ -16,7 +17,8 @@ export class FamilyVaultStack extends cdk.Stack {
     const storage = new StorageConstruct(this, 'Storage', { stage });
     const auth = new AuthConstruct(this, 'Auth', { stage });
     const database = new DatabaseConstruct(this, 'Database', { stage });
-    const notifications = new NotificationsConstruct(this, 'Notifications', { stage });
+    const notifications = new NotificationsConstruct(this, 'Notifications', { stage, table: database.table });
+    const pipeline = new PipelineConstruct(this, 'Pipeline', { stage, bucket: storage.bucket });
 
     const api = new ApiConstruct(this, 'Api', {
       stage,
@@ -27,6 +29,7 @@ export class FamilyVaultStack extends cdk.Stack {
       textractTopic: notifications.textractTopic,
       textractRole: notifications.textractRole,
       pushNotificationTopic: notifications.pushNotificationTopic,
+      deleteObjectTopic: pipeline.deleteObjectTopic,
     });
 
     // Wire S3 PutObject event → ProcessDocument Lambda

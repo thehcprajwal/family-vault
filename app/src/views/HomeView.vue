@@ -1,147 +1,92 @@
 <template>
-  <div class="min-h-screen bg-cream p-6 pb-24">
-    <div class="mx-auto max-w-md">
-      <div class="mb-6 flex items-center justify-between">
+  <div class="min-h-screen bg-cream pb-24">
+    <!-- Header -->
+    <div class="sticky top-0 z-10 border-b border-muted-light bg-cream px-4 pb-3 pt-4">
+      <div class="flex items-center justify-between">
         <div>
-          <p class="text-sm text-muted">Good morning</p>
-          <h1 class="text-2xl font-semibold text-dark">FamilyVault</h1>
+          <p class="text-[12px] uppercase tracking-wide text-muted">FamilyVault</p>
+          <h1 class="text-[20px] font-semibold text-dark">My Library</h1>
         </div>
-        <button @click="handleLogout" class="text-sm font-semibold text-amber">
-          Sign out
-        </button>
-      </div>
-
-      <div class="mb-4 rounded-xl border border-muted-light bg-white p-4">
-        <p class="mb-1 text-sm text-muted">Logged in as</p>
-        <p class="font-semibold text-dark">{{ authStore.user?.email }}</p>
-        <p class="mt-1 text-sm text-muted">Role: {{ authStore.user?.role }}</p>
-        <p class="text-sm text-muted">Vault ID: {{ authStore.user?.vaultId }}</p>
-      </div>
-
-      <div class="mb-4 rounded-xl border border-muted-light bg-white p-4">
-        <p class="mb-2 text-sm font-semibold text-dark">API Health Check</p>
-        <p v-if="apiStatus === 'loading'" class="text-sm text-muted">Checking...</p>
-        <p v-else-if="apiStatus === 'ok'" class="text-sm font-semibold text-sage">
-          API reachable
-        </p>
-        <p v-else class="text-sm text-red-600">API error: {{ apiError }}</p>
-      </div>
-
-      <!-- Pending review banner -->
-      <button
-        v-if="classificationStore.pendingCount > 0"
-        class="mb-4 flex w-full items-center justify-between rounded-xl bg-amber-light px-4 py-3"
-        @click="router.push(`/review/${classificationStore.pending[0].documentId}`)"
-      >
-        <div class="flex items-center gap-3">
-          <div class="flex h-8 w-8 items-center justify-center rounded-full bg-amber/20">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              class="text-amber"
-            >
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-              <line x1="16" y1="13" x2="8" y2="13" />
-              <line x1="16" y1="17" x2="8" y2="17" />
-              <polyline points="10 9 9 9 8 9" />
-            </svg>
-          </div>
-          <div class="text-left">
-            <p class="text-[14px] font-semibold text-amber-dark">Documents to review</p>
-            <p class="text-[12px] text-amber">Tap to confirm AI suggestions</p>
-          </div>
-        </div>
-        <div class="flex items-center gap-2">
-          <span
-            class="flex h-6 w-6 items-center justify-center rounded-full bg-amber text-[12px] font-bold text-white"
-          >
-            {{ classificationStore.pendingCount }}
-          </span>
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            class="text-amber"
-          >
-            <path d="M9 18l6-6-6-6" />
+        <button
+          class="flex h-9 w-9 items-center justify-center rounded-full border border-muted-light bg-white"
+          @click="router.push('/settings')"
+          aria-label="Settings"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
-        </div>
-      </button>
-
-      <div class="rounded-[20px] bg-amber px-5 py-6 text-cream shadow-[0_18px_60px_rgba(153,60,29,0.18)]">
-        <p class="text-sm uppercase tracking-[0.2em] text-cream/70">Sprint 1</p>
-        <h2 class="mt-2 text-xl font-semibold">Vault shell is live</h2>
-        <p class="mt-2 text-sm text-cream/80">
-          Auth, API connectivity, PWA plumbing, and native sync scaffolding are in place.
-        </p>
+        </button>
       </div>
     </div>
 
-    <!-- FAB: Upload Document -->
-    <button
-      class="fixed bottom-24 right-5 flex h-14 w-14 items-center justify-center rounded-full bg-sage shadow-lg"
-      @click="router.push('/upload')"
-      aria-label="Upload document"
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="white"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <line x1="12" y1="5" x2="12" y2="19" />
-        <line x1="5" y1="12" x2="19" y2="12" />
-      </svg>
-    </button>
+    <div class="p-4">
+      <DocumentLibraryView />
+    </div>
 
-    <AppNav />
+    <!-- Push notification bottom sheet -->
+    <Transition name="slide-up">
+      <div v-if="showPushSheet" class="fixed inset-0 z-50 flex items-end" @click.self="dismissPush">
+        <div class="w-full rounded-t-3xl bg-white px-6 pb-10 pt-6 shadow-2xl">
+          <div class="mb-1 flex justify-center">
+            <div class="h-1 w-10 rounded-full bg-muted-light" />
+          </div>
+          <div class="mt-4 flex flex-col items-center text-center">
+            <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber/10 text-[32px]">🔔</div>
+            <h2 class="text-[18px] font-semibold text-dark">Stay on top of expiry dates</h2>
+            <p class="mt-2 text-[14px] text-muted">Get notified when documents need renewal or classification</p>
+          </div>
+          <div class="mt-6 space-y-3">
+            <button class="h-[50px] w-full rounded-xl bg-amber text-[15px] font-semibold text-white" @click="enablePush">
+              Enable Notifications
+            </button>
+            <button class="h-[50px] w-full rounded-xl text-[15px] text-muted" @click="dismissPush">
+              Not now
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import AppNav from '@/components/AppNav.vue';
-import { useHealthCheck } from '@/composables/useHealthCheck';
-import { useAuthStore } from '@/stores/auth';
-import { useClassificationStore } from '@/stores/classification';
+import DocumentLibraryView from '@/views/DocumentLibraryView.vue';
+import { registerPushSubscription } from '@/services/push';
 
-const authStore = useAuthStore();
 const router = useRouter();
-const classificationStore = useClassificationStore();
-const { apiStatus, apiError, run } = useHealthCheck();
+const showPushSheet = ref(false);
 
-onMounted(async () => {
-  try {
-    const token = await authStore.getAccessToken();
-    await run(token);
-  } catch (err) {
-    apiStatus.value = 'error';
-    apiError.value = err instanceof Error ? err.message : String(err);
+onMounted(() => {
+  const alreadyPrompted = localStorage.getItem('fv_push_prompted');
+  if (!alreadyPrompted && typeof Notification !== 'undefined' && Notification.permission === 'default') {
+    setTimeout(() => {
+      showPushSheet.value = true;
+    }, 3000);
   }
 });
 
-async function handleLogout() {
-  await authStore.logout();
-  await router.push('/login');
+async function enablePush(): Promise<void> {
+  showPushSheet.value = false;
+  localStorage.setItem('fv_push_prompted', 'granted');
+  await registerPushSubscription().catch((err) => {
+    console.warn('Push registration failed:', err instanceof Error ? err.message : err);
+  });
+}
+
+function dismissPush(): void {
+  showPushSheet.value = false;
+  localStorage.setItem('fv_push_prompted', 'dismissed');
 }
 </script>
+
+<style scoped>
+.slide-up-enter-active, .slide-up-leave-active {
+  transition: transform 0.3s ease;
+}
+.slide-up-enter-from, .slide-up-leave-to {
+  transform: translateY(100%);
+}
+</style>
